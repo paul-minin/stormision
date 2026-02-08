@@ -2,7 +2,8 @@ export default class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
   preload() {
-    // load vehicle SVGs (simple placeholders)
+    // load vehicle images. If a PNG is present for tiv1 we'll prefer it.
+    this.load.image('tiv1_png','/assets/vehicles/tiv1.png');
     this.load.image('tiv1','/assets/vehicles/tiv1.svg');
     this.load.image('tiv2','/assets/vehicles/tiv2.svg');
     this.load.image('dom1','/assets/vehicles/dom1.svg');
@@ -20,14 +21,11 @@ export default class GameScene extends Phaser.Scene {
     for (let x=0;x<this.worldWidth;x+=64) g.lineBetween(x,0,x,this.worldHeight);
     for (let y=0;y<this.worldHeight;y+=64) g.lineBetween(0,y,this.worldWidth,y);
 
-    // player placeholder
-    this.player = this.physics.add.sprite(400,300,'tiv1').setDepth(2);
-    this.player.setCollideWorldBounds(true);
-    this.player.speed = 220; // default
-    this.player.capacity = 2; // intercept capability
+    // player is created on spawn
+    this.player = null;
 
-    // camera follow
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    // center camera on map initially
+    this.cameras.main.centerOn(this.worldWidth/2, this.worldHeight/2);
 
     // controls
     this.keys = this.input.keyboard.addKeys({
@@ -42,32 +40,51 @@ export default class GameScene extends Phaser.Scene {
     // tornado group
     this.tornados = this.physics.add.group();
 
-    // UI hooks (touch)
-    document.getElementById('startBtn').onclick = () => this.startWave();
-    document.getElementById('deployBtn').onclick = () => this.attemptDeploy();
-    document.getElementById('startBtn2').onclick = () => this.startWave();
-    document.getElementById('deployBtn2').onclick = () => this.attemptDeploy();
+    // UI hooks (touch & start overlay)
+    const startOverlayBtn = document.getElementById('startOverlayBtn');
+    const startBtn2 = document.getElementById('startBtn2');
+    const spawnBtn = document.getElementById('spawnBtn');
+    const spawnClose = document.getElementById('spawnClose');
 
-    // vehicle select
-    document.getElementById('vehicle').onchange = (e) => this.changeVehicle(e.target.value);
+    if (startOverlayBtn) startOverlayBtn.onclick = () => this.enterGame();
+    if (startBtn2) startBtn2.onclick = () => { if (!this.started) this.enterGame(); else this.startWave(); };
+    if (spawnBtn) spawnBtn.onclick = () => this.showSpawnModal();
+    if (spawnClose) spawnClose.onclick = () => this.hideSpawnModal();
 
-    // minimap: small camera
-    this.minimap = this.cameras.add(10, this.scale.height - 130, 180, 120).setZoom(0.08).setName('mini');
+    document.querySelectorAll('.spawn-option').forEach(b=> {
+      b.onclick = (e) => { const v = e.currentTarget.dataset.vehicle; this.spawnVehicle(v); this.hideSpawnModal(); };
+    });
+
+    // vehicle select fallback
+    const vehicleSelect = document.getElementById('vehicle');
+    if (vehicleSelect) vehicleSelect.onchange = (e) => this.changeVehicle(e.target.value);
+
+    // minimap: small camera top-left, hidden until start
+    this.minimap = this.cameras.add(10, 10, 180, 120).setZoom(0.08).setName('mini');
     this.minimap.setBackgroundColor(0x071427);
-    this.minimap.startFollow(this.player, true);
+    this.minimap.setVisible(false);
 
-    // collisions and overlap
-    this.physics.add.overlap(this.player, this.tornados, (p,t)=>{/* visual overlap, intercept via key */});
+    // handle resizes so minimap and camera view keep correct positions
+    this.scale.on('resize', this.onResize, this);
+    this.onResize();
+
+    // collisions - overlap handling will check for player existence
+    this.physics.add.overlap(this.tornados, this.tornados, ()=>{});
 
     // spawn timer off by default
     this.waveActive = false;
 
-    // show help
-    this.add.text(10,10,'WASD = Move • SPACE = Deploy • ENTER = Start',{fontSize:'16px', color:'#fff'}).setScrollFactor(0);
+    // HUD (hidden until start)
+    this.hudText = this.add.text(10,10,'WASD = Move • SPACE = Deploy • ENTER = Start',{fontSize:'16px', color:'#fff'}).setScrollFactor(0).setVisible(false);
+
+    // started flag
+    this.started = false;
   }
 
   update(time,delta) {
-    this.handleInput(delta);
+    // handle input only after game started and player exists
+    if (this.started && this.player) this.handleInput(delta);
+
     // update tornados - rotate sprite and simple movement
     this.tornados.getChildren().forEach(t=>{
       t.rotation += 0.01 * t.spin;
@@ -78,8 +95,10 @@ export default class GameScene extends Phaser.Scene {
       if (t.y<20||t.y>this.worldHeight-20) t.dir = -t.dir;
     });
 
-    // keyboard start/deploy
-    if (Phaser.Input.Keyboard.JustDown(this.keys.start)) this.startWave();
+    // keyboard start/deploy: Enter enters the game if not started, otherwise starts wave
+    if (Phaser.Input.Keyboard.JustDown(this.keys.start)) {
+      if (!this.started) this.enterGame(); else this.startWave();
+    }
     if (Phaser.Input.Keyboard.JustDown(this.keys.deploy)) this.attemptDeploy();
 
     // cleanup tornados out of map
@@ -152,7 +171,62 @@ export default class GameScene extends Phaser.Scene {
   changeVehicle(key){
     const mapping = { tiv1:{speed:220,cap:2}, tiv2:{speed:240,cap:3}, dom1:{speed:180,cap:1}, dom2:{speed:200,cap:2}, dom3:{speed:160,cap:4} };
     const m = mapping[key] || mapping.tiv1;
-    this.player.setTexture(key);
+    if (this.player) {
+      const tex = (key === 'tiv1' && this.textures.exists('tiv1_png')) ? 'tiv1_png' : key;
+      this.player.setTexture(tex);
+      this.player.setDisplaySize(64,64);
+      this.player.speed = m.speed; this.player.capacity = m.cap;
+    }
+  }
+
+  // Called when user presses Start on overlay
+  enterGame(){
+    if (this.started) return;
+    this.started = true;
+    const overlay = document.getElementById('startOverlay'); if (overlay) overlay.style.display='none';
+    const ui = document.getElementById('ui'); if (ui) ui.style.display='block';
+    const touch = document.getElementById('touchButtons'); if (touch) touch.style.display='flex';
+    // show minimap camera (no DOM element)
+    this.minimap.setVisible(true);
+    this.hudText.setVisible(true);
+    // center camera on map when entering
+    this.cameras.main.centerOn(this.worldWidth/2, this.worldHeight/2);
+    document.getElementById('spawnBtn').style.display = 'inline-block';
+  }
+
+  showSpawnModal(){
+    const m = document.getElementById('spawnModal'); if (m) m.style.display='block';
+  }
+  hideSpawnModal(){
+    const m = document.getElementById('spawnModal'); if (m) m.style.display='none';
+  }
+
+  spawnVehicle(type){
+    // spawn at center of camera view (use world center of main camera)
+    const cam = this.cameras.main;
+    const x = cam.worldView.x + cam.worldView.width / 2;
+    const y = cam.worldView.y + cam.worldView.height / 2;
+    if (this.player) { this.player.destroy(); this.player = null; }
+    // if tiv1 PNG exists prefer it, otherwise use the key as given
+    const textureKey = (type === 'tiv1' && this.textures.exists('tiv1_png')) ? 'tiv1_png' : type;
+    this.player = this.physics.add.sprite(x,y,textureKey).setDepth(2);
+    this.player.setCollideWorldBounds(true);
+    // make vehicles uniform size
+    this.player.setDisplaySize(64,64);
+    const mapping = { tiv1:{speed:220,cap:2}, tiv2:{speed:240,cap:3}, dom1:{speed:180,cap:1}, dom2:{speed:200,cap:2}, dom3:{speed:160,cap:4} };
+    const m = mapping[type] || mapping.tiv1;
     this.player.speed = m.speed; this.player.capacity = m.cap;
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    if (this.minimap) this.minimap.startFollow(this.player, true);
+    // ensure spawn UI hides
+    this.hideSpawnModal();
+  }
+
+  onResize(gameSize, baseSize, displaySize, previousSize){
+    // reposition minimap top-left at (10,10) with fixed size; called on scale resize
+    const mmW = 180; const mmH = 120; const pad = 10;
+    if (this.minimap) this.minimap.setViewport(pad, pad, mmW, mmH);
+    // ensure HUD text stays visible (scrollFactor 0 keeps it in place)
+    if (this.hudText) this.hudText.setScrollFactor(0);
   }
 }
