@@ -2,8 +2,9 @@ export default class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
   preload() {
-    // load vehicle images. If a PNG is present for tiv1 we'll prefer it.
+    // load vehicle images. Prefer PNG if present, fall back to JPG or SVG.
     this.load.image('tiv1_png','/assets/vehicles/tiv1.png');
+    this.load.image('tiv1_jpg','/assets/vehicles/tiv1.jpg');
     this.load.image('tiv1','/assets/vehicles/tiv1.svg');
     this.load.image('tiv2','/assets/vehicles/tiv2.svg');
     this.load.image('dom1','/assets/vehicles/dom1.svg');
