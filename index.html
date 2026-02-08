@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Storm Chaser — Prototype</title>
+  <style>
+    body { margin:0; background:#111; color:#ddd; font-family:Arial,Helvetica,sans-serif }
+    #gameContainer { width:100vw; height:100vh; overflow:hidden; position:relative }
+    #ui { position:absolute; left:10px; top:10px; z-index:10 }
+    .btn { background:#2b2b2b; border:1px solid #555; color:#fff; padding:6px 8px; margin:4px; border-radius:4px; cursor:pointer }
+    #miniMap { position:absolute; left:10px; bottom:10px; width:180px; height:120px; border:1px solid #444; background:#07142b; }
+    #vehicleSelect { margin-bottom:8px }
+    #touchButtons { position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:8px }
+  </style>
+</head>
+<body>
+  <div id="gameContainer"></div>
+
+  <div id="ui">
+    <div id="vehicleSelect">
+      <label style="font-weight:bold">Fahrzeug:</label>
+      <select id="vehicle" class="btn">
+        <option value="tiv1">TIV1</option>
+        <option value="tiv2">TIV2</option>
+        <option value="dom1">DOM1</option>
+        <option value="dom2">DOM2</option>
+        <option value="dom3">DOM3</option>
+      </select>
+    </div>
+    <button id="startBtn" class="btn">Start (Touch)</button>
+    <button id="deployBtn" class="btn">Deploy (Touch)</button>
+  </div>
+
+  <div id="touchButtons">
+    <button id="startBtn2" class="btn">▶ START</button>
+    <button id="deployBtn2" class="btn">✱ DEPLOY</button>
+  </div>
+
+  <div id="miniMap"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
