@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Storm Chaser — Prototype</title>
+  <style>
+    body { margin:0; background:#111; color:#ddd; font-family:Arial,Helvetica,sans-serif }
+    #gameContainer { position:fixed; inset:0; overflow:hidden; position:relative }
+    /* ensure canvas fills container */
+    #gameContainer canvas { width:100% !important; height:100% !important; display:block }
+    /* main UI hidden until Start */
+    #ui { position:absolute; left:10px; top:10px; z-index:10; display:none }
+    .btn { background:#2b2b2b; border:1px solid #555; color:#fff; padding:6px 8px; margin:4px; border-radius:4px; cursor:pointer }
+    /* UI positioned top-right now */
+    #ui { position:absolute; right:10px; top:10px; z-index:10; display:none }
+    /* touch buttons at top-right */
+    #touchButtons { position:absolute; right:10px; top:70px; display:flex; flex-direction:column; gap:8px }
+    #vehicleSelect { margin-bottom:8px }
+    /* touch buttons hidden until start */
+    #touchButtons { position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:8px; display:none }
+
+    /* spawn button & modal */
+    #spawnBtn { display:none }
+    #startOverlay { position:fixed; inset:0; background:#000; display:flex; align-items:center; justify-content:center; z-index:1000; flex-direction:column; color:#fff }
+    #startOverlay .btn { font-size:20px; padding:12px 24px }
+    #spawnModal { position:fixed; right:20px; top:20px; background:#222; padding:10px; border:1px solid #444; border-radius:6px; display:none; z-index:1100 }
+    #spawnModal .btn { display:block; margin:6px 0 }
+  </style>
+</head>
+<body>
+  <div id="gameContainer"></div>
+
+  <!-- Start Overlay shown on first open -->
+  <div id="startOverlay">
+    <h1 style="color:#fff; font-size:32px; margin-bottom:16px">Start</h1>
+    <button id="startOverlayBtn" class="btn">Start</button>
+  </div>
+
+  <div id="ui">
+    <div id="vehicleSelect" style="display:none">
+      <label style="font-weight:bold">Fahrzeug:</label>
+      <select id="vehicle" class="btn">
+        <option value="tiv1">TIV1</option>
+        <option value="tiv2">TIV2</option>
+        <option value="dom1">DOM1</option>
+        <option value="dom2">DOM2</option>
+        <option value="dom3">DOM3</option>
+      </select>
+    </div>
+    <button id="spawnBtn" class="btn">Spawn Fahrzeug</button>
+    <button id="deployBtn" class="btn" style="display:none">Deploy (Touch)</button>
+  </div>
+
+  <div id="touchButtons" style="display:none">
+    <button id="startBtn2" class="btn">▶ START</button>
+    <button id="deployBtn2" class="btn">✱ DEPLOY</button>
+  </div>
+
+  <div id="spawnModal">
+    <div style="font-weight:bold; margin-bottom:6px">Wähle Fahrzeug</div>
+    <button class="btn spawn-option" data-vehicle="tiv1">TIV1</button>
+    <button class="btn spawn-option" data-vehicle="tiv2">TIV2</button>
+    <button class="btn spawn-option" data-vehicle="dom1">DOM1</button>
+    <button class="btn spawn-option" data-vehicle="dom2">DOM2</button>
+    <button class="btn spawn-option" data-vehicle="dom3">DOM3</button>
+    <button id="spawnClose" class="btn">Schließen</button>
+  </div>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
